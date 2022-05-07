@@ -13,26 +13,6 @@ __kernel void blur(
     int currentRow = idx / (*cols);
     int currentCol = idx % (*cols);
     double4 acc= (double4)(0.0);
- 
-    //printf("%d, %d, %d\n", idx, currentRow, currentCol);
-
-    //printf("In:  %d, %d, %d\n", (pixels)[idx].s0, (pixels)[idx].s1, (pixels)[idx].s2);
-
-    /*
-    if(idx == 0)
-    {
-        printf("rows: %d\n", *rows);
-        printf("cols: %d\n", *cols);
-        printf("cKernelDimension: %d\n", *cKernelDimension);
-
-        printf("Kernel Matrix:\n");
-        int kd;
-        for(kd = 0; kd < (*cKernelDimension)*(*cKernelDimension); kd++)
-        {
-            printf("%f\n", ckernel[kd]);
-        }
-    }
-    */
 
     int i, j;
          
@@ -53,10 +33,6 @@ __kernel void blur(
         }
     }
 
-    //printf("Out: %f, %f, %f\n", acc.s0, acc.s1, acc.s2);
-
     //converts to uchar4 and clamps result to range [0,255]
     out[idx] = convert_uchar4_sat(acc);
-    
-    //printf("%d, %d, %d\n", out[idx].s0, out[idx].s1, out[idx].s2);
 }

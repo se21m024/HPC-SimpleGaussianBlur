@@ -1,13 +1,9 @@
 ﻿using System;
-using System.CodeDom;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using OpenCL.Net;
 
 namespace SimpleGaussianBlur
@@ -52,46 +48,29 @@ namespace SimpleGaussianBlur
 
         private static Bitmap Convolve(Bitmap inputImage, double[,] kernelMatrix, int kernelDim)
         {
-            // transform input bitmap into byte array
-            //var converter = new ImageConverter();
-            //var inputImageArray = (byte[])converter.ConvertTo(inputImage, typeof(byte[]));
-
-            //byte[] inputImageArray;
-            //using (var stream = new MemoryStream())
-            //{
-            //    inputImage.Save(stream, System.Drawing.Imaging.ImageFormat.Bmp);
-            //    inputImageArray = stream.ToArray();
-            //}
-
-            int width = inputImage.Width;
-            int height = inputImage.Height;
-            BitmapData srcData = inputImage.LockBits(new Rectangle(0, 0, width, height),
-                ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-
-            int bytes = srcData.Stride * srcData.Height;
-            byte[] inputImageArray = new byte[bytes];
-
-            Marshal.Copy(srcData.Scan0, inputImageArray, 0, bytes);
-            inputImage.UnlockBits(srcData);
-            
+            // Convert input bitmap to byte array
+            var width = inputImage.Width;
+            var height = inputImage.Height;
+            var inputBitmapData = inputImage.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+            var imageElementSize = inputBitmapData.Stride * inputBitmapData.Height;
+            var imageDataSize = imageElementSize * sizeof(byte);
+            var inputArray = new byte[imageElementSize];
+            Marshal.Copy(inputBitmapData.Scan0, inputArray, 0, imageElementSize);
+            inputImage.UnlockBits(inputBitmapData);
 
             // Flatten kernel array
             var flattenedKernel = kernelMatrix.Cast<double>().ToArray(); 
 
-            // input and output data
-            var imageElementSize = bytes;//4 * inputImage.Height * inputImage.Width; //inputImageArray.Length;
-            var imageDataSize = imageElementSize * sizeof(byte);
-
-            var inputArray = inputImageArray; //new byte[imageElementSize];
+            // output data
             var outputArray = new byte[imageElementSize];
 
+            // other input data
             var kernelElementSize = flattenedKernel.Length;
             var kernelDataSize = kernelElementSize * sizeof(double);
+            var kernelArray = flattenedKernel;
 
-            var kernelArray = flattenedKernel; //new double[flattenedKernel.Length];
-
-            var rows = inputImage.Height;
-            var cols = inputImage.Width;
+            var rows = width;
+            var cols = height;
             var intDataSize = sizeof(int);
 
             // used for checking error status of api calls
@@ -109,9 +88,9 @@ namespace SimpleGaussianBlur
             }
 
             // select the platform
-            Platform[] platforms = new Platform[numPlatforms];
+            var platforms = new Platform[numPlatforms];
             CheckStatus(Cl.GetPlatformIDs(1, platforms, out numPlatforms));
-            Platform platform = platforms[0];
+            var platform = platforms[0];
 
             // retrieve the number of devices
             uint numDevices = 0;
@@ -160,7 +139,6 @@ namespace SimpleGaussianBlur
             // write data from the input arrays to the buffers
             CheckStatus(Cl.EnqueueWriteBuffer(commandQueue, bufferInputImage, Bool.True, IntPtr.Zero, new IntPtr(imageDataSize), inputArray, 0, null, out _));
             CheckStatus(Cl.EnqueueWriteBuffer(commandQueue, bufferKernel, Bool.True, IntPtr.Zero, new IntPtr(kernelDataSize), kernelArray, 0, null, out _));
-            //CheckStatus(Cl.EnqueueWriteBuffer(commandQueue, bufferOutputImage, Bool.True, IntPtr.Zero, new IntPtr(imageDataSize), outputArray, 0, null, out _));
             CheckStatus(Cl.EnqueueWriteBuffer(commandQueue, bufferRows, Bool.True, IntPtr.Zero, new IntPtr(intDataSize), rows, 0, null, out _));
             CheckStatus(Cl.EnqueueWriteBuffer(commandQueue, bufferCols, Bool.True, IntPtr.Zero, new IntPtr(intDataSize), cols, 0, null, out _));
             CheckStatus(Cl.EnqueueWriteBuffer(commandQueue, bufferKernelDim, Bool.True, IntPtr.Zero, new IntPtr(intDataSize), kernelDim, 0, null, out _));
@@ -227,31 +205,11 @@ namespace SimpleGaussianBlur
             // read the device output buffer to the host output array
             CheckStatus(Cl.EnqueueReadBuffer(commandQueue, bufferOutputImage, Bool.True, IntPtr.Zero, new IntPtr(imageDataSize), outputArray, 0, null, out var _));
 
-            if (outputArray.All(x => x == 0))
-            {
-                Console.WriteLine("Output array is 0.");
-                Console.ReadLine();
-                System.Environment.Exit(1);
-            }
-
-            //var outputImage = new Bitmap(new MemoryStream(outputArray));
-            //var outputImage = Bitmap.FromStream(new MemoryStream(outputArray.ToArray()), false, false);
-            //var outputImage = (Bitmap)new ImageConverter().ConvertFrom(outputArray);
-            //var outputImage2 = Image.FromStream(new MemoryStream(outputArray));
-            //var outputImage = (Bitmap)outputImage2;
-
-            //var outputBuffer = new byte[]
-            //var ms = new MemoryStream();
-            //ms.Write(outputImage, 0, imageFile.Length)
-
-            //Dim original As New System.Drawing.Bitmap(ms)
-
-            Bitmap outputImage = new Bitmap(width, height);
-            BitmapData resultData = outputImage.LockBits(new Rectangle(0, 0, width, height),
-                ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
-            Marshal.Copy(outputArray, 0, resultData.Scan0, bytes);
-            outputImage.UnlockBits(resultData);
-
+            // convert output array to bitmap
+            var outputImage = new Bitmap(width, height);
+            var outputBitmapData = outputImage.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+            Marshal.Copy(outputArray, 0, outputBitmapData.Scan0, imageElementSize);
+            outputImage.UnlockBits(outputBitmapData);
 
             // release opencl objects
             CheckStatus(Cl.ReleaseKernel(kernel));
