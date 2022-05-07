@@ -1,7 +1,5 @@
 ﻿using System.Drawing;
 using System;
-using System.IO;
-using OpenCL.Net;
 
 namespace SimpleGaussianBlur
 {
@@ -15,8 +13,8 @@ namespace SimpleGaussianBlur
             using (var inputImage = new Bitmap("./InputImage.bmp"))
             {
                 // For testing purposes: .NET implementation without using OpenCL -> Remove this if not required any more
-                var outputImage = GaussianNet.ApplyGaussianBlur(inputImage);
-                //GaussianOpenCl.ApplyGaussianBlur(inputImage);
+                //var outputImage = GaussianNet.ApplyGaussianBlur(inputImage);
+                var outputImage = GaussianOpenCl.ApplyGaussianBlur(inputImage);
                 outputImage.Save("./OutputImage.bmp");
             }
 

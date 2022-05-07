@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace SimpleGaussianBlur
 {
+    // Based on: https://epochabuse.com/gaussian-blur/
     public class GaussianNet
     {
         public static Bitmap ApplyGaussianBlur(Bitmap image)
