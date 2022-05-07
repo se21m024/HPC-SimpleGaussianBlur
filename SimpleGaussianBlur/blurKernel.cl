@@ -9,33 +9,32 @@ __kernel void blur(
     __constant int *cols,
     __constant int *cKernelDimension)
 {
-    int idx = get_global_id(0);
-    int currentRow = idx / (*cols);
-    int currentCol = idx % (*cols);
+    int currentRow = get_global_id(0);
+    int currentCol = get_global_id(1);
     double4 tempPixel = (double4)(0.0);
 
-    int i, j;
+    int cKernelX, cKernelY;
 
-    for(j = 0; j < (*cKernelDimension); j++)
+    for(cKernelY = 0; cKernelY < (*cKernelDimension); cKernelY++)
     {
-        int y = currentRow + (j - (*cKernelDimension / 2));
+        int y = currentRow - *cKernelDimension / 2 + cKernelY;
         if(y < 0 || y >= *rows)
         {
             y = currentRow;
         }
 
-        for(i = 0; i < (*cKernelDimension); i++)
+        for(cKernelX = 0; cKernelX < (*cKernelDimension); cKernelX++)
         {
-            int x = currentCol + (i - (*cKernelDimension / 2));
+            int x = currentCol - *cKernelDimension / 2 + cKernelX;
             if(x < 0 || x >= *cols)
             {
                 x = currentCol;
             }
 
-            tempPixel +=  convert_double4( (inputPixels[((y * (*cols) + x))])) * cKernel[(j * (*cKernelDimension)) + i];
+            tempPixel +=  convert_double4( (inputPixels[((y * (*cols) + x))])) * cKernel[(cKernelY * (*cKernelDimension)) + cKernelX];
         }
     }
 
-    // convert to uchar4 and adjust value
-    outputPixels[idx] = convert_uchar4_sat(tempPixel);
+    // convert to uchar4 and adjust values
+    outputPixels[currentRow * (*cols) + currentCol] = convert_uchar4_sat(tempPixel);
 }

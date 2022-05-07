@@ -206,15 +206,14 @@ namespace SimpleGaussianBlur
             // execute the kernel
             // ndrange capabilities only need to be checked when we specify a local work group size manually
             // in our case we provide NULL as local work group size, which means groups get formed automatically
-            CheckStatus(Cl.EnqueueNDRangeKernel(commandQueue, kernel, 1, null, new IntPtr[] { new IntPtr(imageElementSize) }, null, 0, null, out var _));
+            CheckStatus(Cl.EnqueueNDRangeKernel(commandQueue, kernel, 2, null, new IntPtr[] { new IntPtr(height), new IntPtr(width), }, null, 0, null, out var _));
 
             // read the device output buffer to the host output array
             CheckStatus(Cl.EnqueueReadBuffer(commandQueue, bufferOutputImage, Bool.True, IntPtr.Zero, new IntPtr(imageDataSize), outputArray, 0, null, out var _));
 
             // convert output array to bitmap
             Bitmap outputImage = new Bitmap(width, height);
-            BitmapData resultData = outputImage.LockBits(new Rectangle(0, 0, width, height),
-                ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+            BitmapData resultData = outputImage.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
             Marshal.Copy(outputArray, 0, resultData.Scan0, bytes);
             outputImage.UnlockBits(resultData);
 
