@@ -12,7 +12,7 @@ namespace SimpleGaussianBlur
     {
         public static Bitmap ApplyGaussianBlur(Bitmap inputImage)
         {
-            const int kernelDimension = 5;
+            const int kernelDimension = 7;
             var kernel = CreateKernel(kernelDimension, kernelDimension);
             return Convolve(inputImage, kernel, kernelDimension);
         }
@@ -48,6 +48,7 @@ namespace SimpleGaussianBlur
 
         private static Bitmap Convolve(Bitmap inputImage, double[,] kernelMatrix, int kernelDim)
         {
+            // convert bitmap to byte array
             int width = inputImage.Width;
             int height = inputImage.Height;
             BitmapData srcData = inputImage.LockBits(new Rectangle(0, 0, width, height),
@@ -66,13 +67,13 @@ namespace SimpleGaussianBlur
             var imageElementSize = bytes;
             var imageDataSize = imageElementSize * sizeof(byte);
 
-            var inputArray = inputImageArray; //new byte[imageElementSize];
+            var inputArray = inputImageArray;
             var outputArray = new byte[imageElementSize];
 
             var kernelElementSize = flattenedKernel.Length;
             var kernelDataSize = kernelElementSize * sizeof(double);
 
-            var kernelArray = flattenedKernel; //new double[flattenedKernel.Length];
+            var kernelArray = flattenedKernel;
 
             var rows = inputImage.Height;
             var cols = inputImage.Width;
@@ -144,7 +145,6 @@ namespace SimpleGaussianBlur
             // write data from the input arrays to the buffers
             CheckStatus(Cl.EnqueueWriteBuffer(commandQueue, bufferInputImage, Bool.True, IntPtr.Zero, new IntPtr(imageDataSize), inputArray, 0, null, out _));
             CheckStatus(Cl.EnqueueWriteBuffer(commandQueue, bufferKernel, Bool.True, IntPtr.Zero, new IntPtr(kernelDataSize), kernelArray, 0, null, out _));
-            //CheckStatus(Cl.EnqueueWriteBuffer(commandQueue, bufferOutputImage, Bool.True, IntPtr.Zero, new IntPtr(imageDataSize), outputArray, 0, null, out _));
             CheckStatus(Cl.EnqueueWriteBuffer(commandQueue, bufferRows, Bool.True, IntPtr.Zero, new IntPtr(intDataSize), rows, 0, null, out _));
             CheckStatus(Cl.EnqueueWriteBuffer(commandQueue, bufferCols, Bool.True, IntPtr.Zero, new IntPtr(intDataSize), cols, 0, null, out _));
             CheckStatus(Cl.EnqueueWriteBuffer(commandQueue, bufferKernelDim, Bool.True, IntPtr.Zero, new IntPtr(intDataSize), kernelDim, 0, null, out _));
@@ -211,12 +211,12 @@ namespace SimpleGaussianBlur
             // read the device output buffer to the host output array
             CheckStatus(Cl.EnqueueReadBuffer(commandQueue, bufferOutputImage, Bool.True, IntPtr.Zero, new IntPtr(imageDataSize), outputArray, 0, null, out var _));
 
+            // convert output array to bitmap
             Bitmap outputImage = new Bitmap(width, height);
             BitmapData resultData = outputImage.LockBits(new Rectangle(0, 0, width, height),
                 ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
             Marshal.Copy(outputArray, 0, resultData.Scan0, bytes);
             outputImage.UnlockBits(resultData);
-
 
             // release opencl objects
             CheckStatus(Cl.ReleaseKernel(kernel));
@@ -224,6 +224,9 @@ namespace SimpleGaussianBlur
             CheckStatus(Cl.ReleaseMemObject(bufferInputImage));
             CheckStatus(Cl.ReleaseMemObject(bufferKernel));
             CheckStatus(Cl.ReleaseMemObject(bufferOutputImage));
+            CheckStatus(Cl.ReleaseMemObject(bufferRows));
+            CheckStatus(Cl.ReleaseMemObject(bufferCols));
+            CheckStatus(Cl.ReleaseMemObject(bufferKernelDim));
             CheckStatus(Cl.ReleaseCommandQueue(commandQueue));
             CheckStatus(Cl.ReleaseContext(context));
 
