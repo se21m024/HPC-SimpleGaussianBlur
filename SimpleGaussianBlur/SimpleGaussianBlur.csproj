@@ -49,8 +49,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GaussianNet.cs" />
-    <Compile Include="DemoExample.cs" />
     <Compile Include="GaussianOpenCl.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -58,9 +56,6 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="blurKernel.cl">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="kernel.cl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
